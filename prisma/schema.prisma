@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(uuid())
+  username    String       @unique
+  experiments Experiment[]
+}
+
+model Experiment {
+  id         String   @id @default(uuid())
+  userId     String
+  seedWordId String
+  createdAt  DateTime @default(now())
+  seedWord   SeedWord @relation(fields: [seedWordId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  ratings    Rating[]
+  words      Word[]
+}
+
+model Word {
+  id           String     @id @default(uuid())
+  experimentId String
+  content      String
+  createdAt    DateTime   @default(now())
+  ratings      Rating[]
+  experiment   Experiment @relation(fields: [experimentId], references: [id])
+}
+
+model SeedWord {
+  id          String       @id @default(uuid())
+  word        String       @unique
+  experiments Experiment[]
+}
+
+model Rating {
+  id           String     @id @default(uuid())
+  experimentId String
+  wordId       String
+  score        Int
+  experiment   Experiment @relation(fields: [experimentId], references: [id])
+  word         Word       @relation(fields: [wordId], references: [id])
+}
