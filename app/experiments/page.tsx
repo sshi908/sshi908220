@@ -76,7 +76,7 @@ export default function ExperimentsPage() {
                   }
                   className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-700"
                 >
-                  실험 보기
+                  단어 재생
                 </button>
               </td>
             </tr>

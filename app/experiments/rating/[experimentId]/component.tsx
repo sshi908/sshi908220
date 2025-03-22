@@ -4,25 +4,41 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+interface Word {
+  id: string;
+  word: string;
+}
+
 export default function ExperimentRatingComponent({
   experimentId,
 }: {
   experimentId: string;
 }) {
-  const [words, setWords] = useState<string[]>([]);
-  const [seedWord, setSeedWord] = useState<string>("");
-  const [ratings, setRatings] = useState<number[]>([]);
+  const [prevWord, setPrevWord] = useState<string>("");  // 이전 단어 (회색)
+  const [currentWord, setCurrentWord] = useState<Word | null>(null);  // 현재 단어 (검은색)
+  const [words, setWords] = useState<Word[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [negativePositive, setNegativePositive] = useState<number>(0);
+  const [relevance, setRelevance] = useState<number>(0);
+  const [timePerspective, setTimePerspective] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     async function fetchWords() {
       try {
         const response = await axios.get(`/api/experiments/${experimentId}`);
-        setWords(
-          response.data.words.map((word: { word: string }) => word.word)
-        );
-        setSeedWord(response.data.seedWord);
-        setRatings(Array(response.data.words.length).fill(5));
+        
+        const fetchedWords = response.data.words.map((item: any) => ({
+          id: item.id,
+          word: item.word,
+        }));
+
+        setWords(fetchedWords);
+
+        if (fetchedWords.length > 0) {
+          setCurrentWord(fetchedWords[0]); // 첫 단어 설정
+        }
       } catch (error) {
         console.error("단어를 불러오는 중 오류 발생:", error);
       }
@@ -30,58 +46,125 @@ export default function ExperimentRatingComponent({
     fetchWords();
   }, [experimentId]);
 
-  const handleRatingChange = (index: number, value: number) => {
-    setRatings((prevRatings) => {
-      const newRatings = [...prevRatings];
-      newRatings[index] = value;
-      return newRatings;
-    });
-  };
+  const handleSubmit = async () => {
+    if (loading || !currentWord) return;
+    setLoading(true);
 
-  const handleSaveRatings = async () => {
     try {
       await axios.post(`/api/experiments/ratings/${experimentId}`, {
-        ratings,
+        prevWord,
+        currentWord: currentWord.word,
+        negativePositive,
+        relevance,
+        timePerspective,
       });
-      alert("평가가 성공적으로 저장되었습니다!");
-      router.push("/experiments");
+
+      const nextIndex = currentIndex + 1;
+
+      if (nextIndex >= words.length) {
+        alert("모든 평가가 완료되었습니다!");
+        router.push("/experiments");
+      } else {
+        setPrevWord(currentWord.word);  // 현재 단어를 이전 단어로 설정
+        setCurrentWord(words[nextIndex]);  // 다음 단어로 이동
+        setCurrentIndex(nextIndex);
+        
+        // 슬라이더 값 초기화
+        setNegativePositive(0);
+        setRelevance(0);
+        setTimePerspective(0);
+      }
     } catch (error) {
       console.error("평가 저장 중 오류 발생:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col items-center p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">
-        {seedWord} 실험 결과 평가
-      </h1>
-      <ul className="w-full max-w-md bg-white shadow-md rounded-lg p-4">
-        {words.map((word, index) => (
-          <li
-            key={index}
-            className="flex justify-between items-center py-2 border-b last:border-none"
-          >
-            <span className="text-lg font-medium text-gray-800">{word}</span>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={ratings[index]}
-              onChange={(e) =>
-                handleRatingChange(index, parseInt(e.target.value))
-              }
-              className="ml-4 w-32"
-            />
-            <span className="ml-2 text-gray-700">{ratings[index]}</span>
-          </li>
-        ))}
-      </ul>
+      {/* 단어 표시 (왼쪽: 이전 단어 / 오른쪽: 현재 단어) */}
+      <div className="relative w-full max-w-2xl h-48 flex items-center justify-center mb-10">
+        {/* 이전 단어 (회색 글씨) */}
+        <div className="absolute left-1/4 transform -translate-x-1/2 text-4xl text-gray-500">
+          {prevWord || ""}
+        </div>
+
+        {/* 현재 단어 (검은 글씨) */}
+        <div className="absolute right-1/4 transform translate-x-1/2 text-5xl font-bold text-black">
+          {currentWord?.word || ""}
+        </div>
+      </div>
+
+      {/* Negative-Positive Slider */}
+      <div className="w-3/4 mb-6">
+        <label>단어를 떠올릴 때 드는 느낌이</label>
+        <input
+          type="range"
+          min="-1"
+          max="1"
+          step="0.001"
+          value={negativePositive}
+          onChange={(e) => setNegativePositive(parseFloat(e.target.value))}
+          className="w-full"
+        />
+        <div className="flex justify-between text-sm mt-1">
+          <span>부정</span>
+          <span>중립</span>
+          <span>긍정</span>
+        </div>
+      </div>
+
+      {/* Relevance Slider */}
+      <div className="w-3/4 mb-6">
+        <label>단어가 자신과 관련된 정도가</label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.001"
+          value={relevance}
+          onChange={(e) => setRelevance(parseFloat(e.target.value))}
+          className="w-full"
+        />
+        <div className="flex justify-between text-sm mt-1">
+          <span>전혀 관련 없음</span>
+          <span>매우 관련 있음</span>
+        </div>
+      </div>
+
+      {/* Time Perspective Slider */}
+      <div className="w-3/4 mb-6">
+        <label>단어가 가장 관련이 높은 자신의 시점은</label>
+        <input
+          type="range"
+          min="-1"
+          max="1"
+          step="0.001"
+          value={timePerspective}
+          onChange={(e) => setTimePerspective(parseFloat(e.target.value))}
+          className="w-full"
+        />
+        <div className="flex justify-between text-sm mt-1">
+          <span>과거</span>
+          <span>현재</span>
+          <span>미래</span>
+        </div>
+      </div>
+
+      {/* Save Button */}
       <button
-        onClick={handleSaveRatings}
-        className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700"
+        onClick={handleSubmit}
+        disabled={loading}
+        className={`mt-4 px-4 py-2 text-white rounded-lg ${
+          loading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-700"
+        }`}
       >
-        평가 저장
+        {loading ? "저장 중..." : "다음"}
       </button>
     </div>
   );
 }
+
+
+
