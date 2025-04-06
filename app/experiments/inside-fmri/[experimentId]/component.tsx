@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 export default function ExperimentDisplayComponent({
-  experimentId,
+  experimentIdList,
 }: {
-  experimentId: string;
+  experimentIdList: string[];
 }) {
-  const [words, setWords] = useState<string[]>([]);
+  const [words, setWords] = useState<{ [key: string]: string[] }>({});
   const [currentWords, setCurrentWords] = useState<
     [string | null, string | null]
   >([null, null]);
@@ -17,53 +17,75 @@ export default function ExperimentDisplayComponent({
   const router = useRouter();
   const [showButton, setShowButton] = useState(false);
   const [isStarted, setIsStarted] = useState(false); // 슬라이드 시작 여부를 나타냄
+  const [currentExperimentIdIndex, setCurrentExperimentIdIndex] =
+    useState<number>(0);
+
+  const currentExperimentId = experimentIdList[currentExperimentIdIndex];
 
   useEffect(() => {
-    async function fetchWords() {
-      try {
-        const response = await axios.get(`/api/experiments/${experimentId}`);
-        setWords([
-          response.data.seedWord,
-          ...response.data.words.map((word: { word: string }) => word.word),
-        ]);
-        setIndex(1);
-      } catch (error) {
-        console.error("Error fetching words:", error);
+    async function fetchAllWords() {
+      const newWords: { [key: string]: string[] } = {};
+
+      for (const experimentId of experimentIdList) {
+        try {
+          const response = await axios.get(`/api/experiments/${experimentId}`);
+          newWords[experimentId] = [
+            response.data.seedWord,
+            ...response.data.words.map((word: { word: string }) => word.word),
+          ];
+        } catch (error) {
+          console.error(`Error fetching words for ${experimentId}:`, error);
+        }
       }
+
+      setWords(newWords);
     }
-    fetchWords();
-  }, [experimentId]);
+
+    if (experimentIdList?.length > 0) {
+      fetchAllWords();
+    }
+  }, [experimentIdList]);
 
   useEffect(() => {
-    if (words.length === 0 || !isStarted) return;
+    if (!isStarted || !currentExperimentId) return;
 
-    setCurrentWords([null, words[0]]);
+    const wordList = words[currentExperimentId] || [];
+
+    if (wordList.length === 0) return;
+
+    setCurrentWords([null, wordList[0]]);
 
     const updateIndex = () => {
       setIndex((prevIndex) => {
-        if (prevIndex >= words.length - 1) {
+        if (prevIndex >= wordList.length - 1) {
           setShowButton(true);
           return prevIndex;
         }
+
+        setCurrentWords([wordList[prevIndex], wordList[prevIndex + 1]]);
         return prevIndex + 1;
       });
     };
 
     const timer = setTimeout(updateIndex, 15000);
     return () => clearTimeout(timer);
-  }, [words, index, router, experimentId, isStarted]);
+  }, [isStarted, words, currentExperimentIdIndex, index]);
 
   useEffect(() => {
+    if (!currentExperimentId) return;
+
+    const wordList = words[currentExperimentId] || [];
+
     if (index > 0) {
-      setCurrentWords([words[index - 1] || null, words[index] || null]);
+      setCurrentWords([wordList[index - 1] || null, wordList[index] || null]);
     }
-  }, [index, words]);
+  }, [index, words, currentExperimentId]);
 
   // 키보드 이벤트 핸들러
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "s") {
-        setIsStarted(true); // 's' 키를 누르면 슬라이드 시작
+      if (event.key.toLowerCase() === "s" || event.key === "ㄴ") {
+        setIsStarted(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -95,7 +117,9 @@ export default function ExperimentDisplayComponent({
       {showButton && (
         <div>
           <button
-            onClick={() => router.push(`/experiments/rating/${experimentId}`)}
+            onClick={() =>
+              router.push(`/experiments/rating/${currentExperimentId}`)
+            }
             className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700"
           >
             시작하기
@@ -105,6 +129,17 @@ export default function ExperimentDisplayComponent({
             className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700"
           >
             목록으로 돌아가기
+          </button>
+          <button
+            onClick={() => {
+              setShowButton(false); // 버튼 숨김
+              setIndex(0); // 단어 인덱스 초기화
+
+              setCurrentExperimentIdIndex((prev) => prev + 1);
+            }}
+            className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700"
+          >
+            다음시드워드
           </button>
         </div>
       )}

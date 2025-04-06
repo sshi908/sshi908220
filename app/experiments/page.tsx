@@ -28,6 +28,31 @@ export default function ExperimentsPage() {
     fetchExperiments();
   }, []);
 
+  const getExperimentIdList = ({
+    username,
+    experimentId: targetExperimentId,
+  }: {
+    username: string;
+    experimentId: string;
+  }) => {
+    // 사용자 이름 기준으로 실험 리스트 필터링
+    const userExperiments = experiments
+      .filter((experiment) => experiment.username === username)
+      .map((experiment) => experiment.experimentId);
+
+    // experimentId를 앞으로 이동, 나머지는 그대로
+    const rearranged = [
+      ...userExperiments.filter(
+        (experimentId) => experimentId === targetExperimentId
+      ),
+      ...userExperiments.filter(
+        (experimentId) => experimentId !== targetExperimentId
+      ),
+    ];
+
+    return rearranged;
+  };
+
   return (
     <div className="flex flex-col items-center p-6 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">실험 목록</h1>
@@ -69,11 +94,20 @@ export default function ExperimentsPage() {
                   상세 보기
                 </button>
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    const experimentIdList = getExperimentIdList({
+                      username: experiment.username,
+                      experimentId: experiment.experimentId,
+                    });
+
+                    const idList = new URLSearchParams(
+                      experimentIdList.join(",")
+                    );
+
                     router.push(
-                      `/experiments/inside-fmri/${experiment.experimentId}`
-                    )
-                  }
+                      `/experiments/inside-fmri/${idList.toString()}`
+                    );
+                  }}
                   className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-700"
                 >
                   단어 재생
