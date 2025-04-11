@@ -11,25 +11,34 @@ export async function POST(
     const { experimentId } = await params;
     const { ratings } = await req.json();
 
-    if (!experimentId || !Array.isArray(ratings) || ratings.length !== 20) {
+    if (
+      !experimentId ||
+      !Array.isArray(ratings) ||
+      ratings.length !== 20 ||
+      !ratings.every(
+        (r) =>
+          r.wordId &&
+          typeof r.relevance === "number" &&
+          typeof r.negativePositive === "number" &&
+          typeof r.timePerspective === "number" &&
+          typeof r.voluntary === "number"
+      )
+    ) {
       return NextResponse.json(
-        { error: "Invalid experiment ID or ratings array" },
+        { error: "Invalid experiment ID or ratings array structure" },
         { status: 400 }
       );
     }
 
-    // Fetch words associated with the experiment
-    const words = await prisma.word.findMany({
-      where: { experimentId },
-      select: { id: true },
-    });
-
-    // Save ratings for each word
-    const ratingEntries = words.map((word: { id: string }, index: number) => ({
+    const ratingEntries = ratings.map((r) => ({
       experimentId,
-      wordId: word.id,
-      score: ratings[index],
+      wordId: r.wordId,
+      relevance: r.relevance,
+      negativePositive: r.negativePositive,
+      timePerspective: r.timePerspective,
+      voluntary: r.voluntary,
     }));
+
     await prisma.rating.createMany({ data: ratingEntries });
 
     return NextResponse.json(

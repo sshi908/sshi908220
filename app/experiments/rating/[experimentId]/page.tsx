@@ -7,11 +7,12 @@ export default async function ExperimentRatingPage({
 }) {
   const { experimentId } = await params;
 
+  const list = experimentId.split(",");
+  const decoded = decodeURIComponent(list[0]).replace(/=$/, "").split(",");
+
   return (
     <div>
-      <ExperimentRatingComponent experimentId={experimentId} />
+      <ExperimentRatingComponent experimentIdList={decoded} />
     </div>
   );
 }
-
-
