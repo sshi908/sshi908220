@@ -38,9 +38,24 @@ export async function GET(
         username: experiment.user.username,
         seedWord: experiment.seedWord.word,
         words: experiment.words.map(
-          (word: { content: string; ratings: { score: number }[] }) => ({
+          (word: {
+            content: string;
+            id: string;
+            ratings: {
+              relevance: number;
+              negativePositive: number;
+              timePerspective: number;
+              voluntary: number;
+            }[];
+          }) => ({
+            id: word.id,
             word: word.content,
-            ratings: word.ratings.map((rating) => rating.score),
+            ratings: word.ratings.map((rating) => ({
+              relevance: rating.relevance,
+              negativePositive: rating.negativePositive,
+              timePerspective: rating.timePerspective,
+              voluntary: rating.voluntary,
+            })),
           })
         ),
         createdAt: experiment.createdAt,

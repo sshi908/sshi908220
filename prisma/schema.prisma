@@ -40,10 +40,14 @@ model SeedWord {
 }
 
 model Rating {
-  id           String     @id @default(uuid())
-  experimentId String
-  wordId       String
-  score        Int
-  experiment   Experiment @relation(fields: [experimentId], references: [id])
-  word         Word       @relation(fields: [wordId], references: [id])
+  id                String     @id @default(uuid())
+  experimentId      String
+  wordId            String
+  relevance         Float
+  negativePositive  Float
+  timePerspective   Float
+  voluntary   Float
+  createdAt         DateTime   @default(now())
+  experiment        Experiment @relation(fields: [experimentId], references: [id])
+  word              Word       @relation(fields: [wordId], references: [id])
 }

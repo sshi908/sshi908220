@@ -39,7 +39,11 @@ CREATE TABLE "Rating" (
     "id" TEXT NOT NULL,
     "experimentId" TEXT NOT NULL,
     "wordId" TEXT NOT NULL,
-    "score" INTEGER NOT NULL,
+    "relevance" DOUBLE PRECISION NOT NULL,
+    "negativePositive" DOUBLE PRECISION NOT NULL,
+    "timePerspective" DOUBLE PRECISION NOT NULL,
+    "voluntary" DOUBLE PRECISION NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Rating_pkey" PRIMARY KEY ("id")
 );
@@ -51,10 +55,10 @@ CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX "SeedWord_word_key" ON "SeedWord"("word");
 
 -- AddForeignKey
-ALTER TABLE "Experiment" ADD CONSTRAINT "Experiment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Experiment" ADD CONSTRAINT "Experiment_seedWordId_fkey" FOREIGN KEY ("seedWordId") REFERENCES "SeedWord"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Experiment" ADD CONSTRAINT "Experiment_seedWordId_fkey" FOREIGN KEY ("seedWordId") REFERENCES "SeedWord"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Experiment" ADD CONSTRAINT "Experiment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Word" ADD CONSTRAINT "Word_experimentId_fkey" FOREIGN KEY ("experimentId") REFERENCES "Experiment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
